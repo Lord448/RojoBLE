@@ -12,6 +12,7 @@ import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -92,7 +93,7 @@ public class RojoBLE {
             return;
         }
         mDevice = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(this.mDeviceMacAddress);
-        if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions((Activity) context, btPermissions, REQUEST_ENABLE_BT);
             ActivityCompat.requestPermissions((Activity) context, btPermissions, REQUEST_ENABLE_ADMIN_BT);
         }
@@ -133,7 +134,7 @@ public class RojoBLE {
             mDeviceMacAddress = searchForMacAddress(this.context, adapter, deviceName);
         }
         mDevice = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(mDeviceMacAddress);
-        if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions((Activity) context, btPermissions, REQUEST_ENABLE_BT);
             ActivityCompat.requestPermissions((Activity) context, btPermissions, REQUEST_ENABLE_ADMIN_BT);
         }
@@ -157,7 +158,7 @@ public class RojoBLE {
     }
 
     public static String searchForMacAddress(Context context, BluetoothAdapter bluetoothAdapter, String deviceName) {
-        if(ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+        if(ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions((Activity) context, PERMISSIONS_STORAGE, 1);
         }
         else if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
@@ -178,6 +179,15 @@ public class RojoBLE {
         }
         Log.i(TAG, "Mac address not founded");
         return null;
+    }
+
+    public static boolean compareStrings(String dataReceived, String dataToCompare) {
+        return dataReceived.toLowerCase().trim().equals(dataToCompare.toLowerCase().trim());
+    }
+
+    public static boolean compareIncomingData(byte[] value, String dataToCompare) {
+        String strValue = new String(value, StandardCharsets.UTF_8);
+        return compareStrings(strValue, dataToCompare);
     }
 
     public boolean sendData(String dataBuffer) {
@@ -210,4 +220,3 @@ public class RojoBLE {
         return GattCallback;
     }
 }
-

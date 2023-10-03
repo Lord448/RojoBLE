@@ -172,7 +172,7 @@ public class RojoGattCallback extends BluetoothGattCallback {
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         super.onCharacteristicChanged(gatt, characteristic);
-        Log.i(TAG, "Characteristic changed.");
+        Log.i(TAG, "Characteristic notification received.");
         byte[] value = characteristic.getValue();
         if(mOnCharacteristicChangedListener != null) {
             mOnCharacteristicChangedListener.onCharacteristicChanged(value);
@@ -279,4 +279,3 @@ public class RojoGattCallback extends BluetoothGattCallback {
         gatt.writeDescriptor(mDescriptor);
     }
 }
-

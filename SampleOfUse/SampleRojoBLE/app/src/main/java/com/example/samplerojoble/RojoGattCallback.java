@@ -281,4 +281,3 @@ public class RojoGattCallback extends BluetoothGattCallback {
         gatt.writeDescriptor(mDescriptor);
     }
 }
-
