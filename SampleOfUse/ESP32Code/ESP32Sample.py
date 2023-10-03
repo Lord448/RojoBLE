@@ -1,4 +1,9 @@
 #Turn on and down a LED
+#Author: Pedro Rojo
+"""
+In order to use this program you need to load first the sample
+Android Studio program on your mobile
+"""
 import esp32 #Internal sensors
 import time
 import machine
@@ -13,9 +18,9 @@ PinLed = Pin(2, Pin.OUT, value = 0) #On GPIO -- Led Builtin
 #Init config
 machine.freq(240000000) # set the CPU frequency to 240 MHz
 valor=machine.freq() # get the current frequency of the CPU
-print("la frecuencia en MHZ es",valor/1000000)
+print("The freq is: ",valor/1000000)
 #BLE Config
-name = 'LabBLE_1'
+name = 'RojoBLE'
 ble = bluetooth.BLE()
 uart = BLEUART(ble, name)
 
