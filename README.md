@@ -107,6 +107,7 @@ RojoBLE.compareIncomingData(value, "This is a more efficient way!")
 - To solve this error just click on "Add permission BLUETOOTH_CONNECT" this will tell the android API that the coder is asking from permission and will add the following line to the Android Manifest
 ```xml
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH" />
 ```
 - Connect compile and run the program
 ### Note: This sample have been only tested on a real phone
