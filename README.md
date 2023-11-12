@@ -7,9 +7,10 @@ This is a java class that will help you to implement and use the BLE on Android 
 
 # How to use
 ### Setting up the classes
-- Add to the "AndroidManifest.xml" the following line
+- Add to the "AndroidManifest.xml" the following lines
 ```xml
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH" />
 ```
 - Import  the java classes "RojoBLE.java" and "RojoGattCallback.java" in the same directory of "MainActivity.java"
 ![Importing Classes.png](./Img/ImportingClasses.png "How to import the java classes")
