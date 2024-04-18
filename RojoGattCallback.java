@@ -1,3 +1,5 @@
+package ca.crit.treasurehunter.rojoble;
+
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -21,8 +23,11 @@ public class RojoGattCallback extends BluetoothGattCallback {
     private final byte[] dataBuffer;
     private BluetoothGattCharacteristic characteristic;
     private BluetoothGattDescriptor mDescriptor;
-    private OnCharacteristicChangedListener mOnCharacteristicChangedListener;
     private byte[] dataReceived;
+    private OnGattServerDisconnected mOnGattServerDisconnected;
+    private OnGattServerConnected mOnGattServerConnected;
+    private OnCharacteristicChangedListener mOnCharacteristicChangedListener;
+    private OnGattServerStatusChangedListener mOnGattServerStatusChangedListeners;
 
     /**
      * @brief The constructor of the class
@@ -59,12 +64,21 @@ public class RojoGattCallback extends BluetoothGattCallback {
     @Override
     public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
         super.onConnectionStateChange(gatt, status, newState);
+        //Listener call
+        if(mOnCharacteristicChangedListener != null)
+            mOnGattServerStatusChangedListeners.onGattServerStatusChangedListener(status);
         if (newState == BluetoothProfile.STATE_CONNECTED) {
             Log.i(TAG, "Connected to GATT server.");
             gatt.discoverServices();
+            //Listener call
+            if(mOnGattServerConnected != null)
+                mOnGattServerConnected.onGattServerDisconnected();
         } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
             Log.i(TAG, "Disconnected from GATT server.");
             //@TODO ScanBT
+            //Listener call
+            if(mOnGattServerDisconnected != null)
+                mOnGattServerDisconnected.onGattServerDisconnected();
         }
     }
 
@@ -172,7 +186,7 @@ public class RojoGattCallback extends BluetoothGattCallback {
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         super.onCharacteristicChanged(gatt, characteristic);
-        Log.i(TAG, "Characteristic notification received.");
+        //Log.i(TAG, "Characteristic notification received.");  //TODO antes estaba descomentada
         byte[] value = characteristic.getValue();
         if(mOnCharacteristicChangedListener != null) {
             mOnCharacteristicChangedListener.onCharacteristicChanged(value);
@@ -224,31 +238,6 @@ public class RojoGattCallback extends BluetoothGattCallback {
     }
 
     /**
-     * @brief Getter fot the dataReceived attribute
-     * @note this code is not proved yet and iy may not work
-     * @return The dataReceive value
-     */
-    public byte[] getDataReceived() {
-        return dataReceived;
-    }
-
-    /**
-     * @brief Interface that specifies the method that will be handle the OnCharacteristicChangedListener
-     */
-    public interface OnCharacteristicChangedListener {
-        void onCharacteristicChanged(byte[] value);
-    }
-
-    /**
-     * @brief Implementation of the interface
-     * @param listener Method that will be called by the listener in the main thread
-     *                 (or other one desired by the user)
-     */
-    public void setOnCharacteristicChangedListener(OnCharacteristicChangedListener listener) {
-        mOnCharacteristicChangedListener = listener;
-    }
-
-    /**
      * @brief Enable the notifications of a desired characteristic and descriptor
      *        contained in the mCharacteristic and mDescriptor attributes
      * @param gatt gatt class instance
@@ -277,5 +266,83 @@ public class RojoGattCallback extends BluetoothGattCallback {
         // Enable remote notifications
         mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
         gatt.writeDescriptor(mDescriptor);
+    }
+
+    /**
+     * @brief Getter fot the dataReceived attribute
+     * @note this code is not proved yet and iy may not work
+     * @return The dataReceive value
+     */
+    public byte[] getDataReceived() {
+        return dataReceived;
+    }
+
+    /**
+     * ----------------------------------------------------
+     *                    LISTENERS
+     * ---------------------------------------------------
+     */
+
+    /**
+     * @brief Interface that specifies the method that will handle the onGattServerDisconnected
+     */
+    public interface OnGattServerConnected {
+        void onGattServerDisconnected();
+    }
+
+    /**
+     * @brief Setter of the listener
+     * @param listener Method that will be called by the listener in the main thread
+     *                 (or other one desired by the user)
+     */
+    public void setOnGattServerConnected(OnGattServerConnected listener) {
+        mOnGattServerConnected = listener;
+    }
+
+    /**
+     * @brief Interface that specifies the method that will handle the onGattServerDisconnected
+     */
+    public interface OnGattServerDisconnected {
+        void onGattServerDisconnected();
+    }
+
+    /**
+     * @brief Setter of the listener
+     * @param listener Method that will be called by the listener in the main thread
+     *                 (or other one desired by the user)
+     */
+    public void setOnGattServerDisconnected(OnGattServerDisconnected listener) {
+        mOnGattServerDisconnected = listener;
+    }
+
+    /**
+     * @brief Interface that specifies the method that will be handle the OnCharacteristicChangedListener
+     */
+    public interface OnCharacteristicChangedListener {
+        void onCharacteristicChanged(byte[] value);
+    }
+
+    /**
+     * @brief Setter of the listener
+     * @param listener Method that will be called by the listener in the main thread
+     *                 (or other one desired by the user)
+     */
+    public void setOnCharacteristicChangedListener(OnCharacteristicChangedListener listener) {
+        mOnCharacteristicChangedListener = listener;
+    }
+
+    /**
+     * @brief Interface that specifies the method that will be handle the onGattServerStatusChangedListener
+     */
+    public interface OnGattServerStatusChangedListener {
+        void onGattServerStatusChangedListener(int status);
+    }
+    /**
+     * @brief Setter of the listener
+     * @param listener Method that will be called by the listener in the main thread
+     *                 (or other one desired by the user)
+     */
+    public void setOnGattServerStatusChangedListener(OnGattServerStatusChangedListener listener) {
+        mOnGattServerStatusChangedListeners = listener;
     }
 }

@@ -1,3 +1,5 @@
+package ca.crit.treasurehunter.rojoble;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -28,7 +30,6 @@ public class RojoBLE {
     private final int typeCharacteristic;
     private final Context context;
     private BluetoothGattCharacteristic mCharacteristic;
-    private SetNotificationsListener setNotificationsListener;
     private BluetoothGatt mGatt;
     private BluetoothDevice mDevice;
     private BluetoothGattDescriptor mDescriptor;
@@ -38,6 +39,11 @@ public class RojoBLE {
     private String strDataReceived;
     private byte[] mDataBuffer;
     private byte[] mDataReceived;
+    private SetNotificationsListener setNotificationsListener;
+    private SetGattServerDisconnectedListener setGattServerDisconnectedListener;
+    private SetGattServerConnectedListener setGattServerConnectedListener;
+    private SetOnGattServerStatusChangedListener setOnGattServerStatusChangedListener;
+
 
     private static final String[] btPermissions = {
             Manifest.permission.BLUETOOTH_CONNECT,
@@ -61,6 +67,15 @@ public class RojoBLE {
             Manifest.permission.BLUETOOTH_PRIVILEGED
     };
 
+    /**
+     * @brief Constructor of the class it prepares all the attributes to
+     *        establish the BLE connection, first it checks the type of
+     *        the characteristic and depending if it's write or notify
+     *        it creates the corresponding objects
+     * @param context  Main context of the Android Application launcher
+     * @param characteristicUUID  UUID of the BLE characteristic
+     * @param typeCharacteristic  Type of the characteristic object that will be created
+     */
     public RojoBLE(Context context, UUID characteristicUUID, int typeCharacteristic, String deviceMacAddress) {
         this.typeCharacteristic = typeCharacteristic;
         this.context = context;
@@ -85,6 +100,9 @@ public class RojoBLE {
                     BluetoothGattCharacteristic.PERMISSION_WRITE);
             GattCallback = new RojoGattCallback(mCharacteristic, null, characteristicUUID);
             GattCallback.setOnCharacteristicChangedListener(this::onCharacteristicNotificationListener);
+            GattCallback.setOnGattServerDisconnected(this::onGattServerDisconnectedListener);
+            GattCallback.setOnGattServerConnected(this::onGattServerConnectedListener);
+            GattCallback.setOnGattServerStatusChangedListener(this::onGattServerStatusChangedListener);
             Log.i(TAG, "Notify characteristic created");
         }
         else {
@@ -101,6 +119,18 @@ public class RojoBLE {
         Log.i(TAG, "Finished construct");
     }
 
+    /**
+     * @brief Overload constructor of the class
+     *        it prepares all the attributes to
+     *        establish the BLE connection, first it checks the type of
+     *        the characteristic and depending if it's write or notify
+     *        it creates the corresponding objects
+     * @param context            Main context of the Android Application Launcher
+     * @param characteristicUUID UUID of the characteristic that will be created
+     * @param typeCharacteristic Type of the characteristic object that will be created
+     * @param adapter            Bluetooth adapter internal instance of the Android API
+     * @param deviceName         Name of the device that will be connected
+     */
     public RojoBLE(Context context, UUID characteristicUUID, int typeCharacteristic, BluetoothAdapter adapter, String deviceName) {
         this.typeCharacteristic = typeCharacteristic;
         this.context = context;
@@ -141,6 +171,13 @@ public class RojoBLE {
         mGatt = mDevice.connectGatt(this.context, false, GattCallback);
     }
 
+    /**
+     * @brief Check if the device that it's executing the program can use BLE
+     * @note  This method handles also the permissions request for BLE
+     * @param context          Main context of the Android Application Launcher
+     * @param bluetoothAdapter Bluetooth adapter internal instance of the Android API
+     * @return True if the device can use BLE, False if not
+     */
     public static boolean checkBLESupport(Context context, BluetoothAdapter bluetoothAdapter) {
         if(bluetoothAdapter != null) {
             if(!bluetoothAdapter.isEnabled()) {
@@ -157,6 +194,13 @@ public class RojoBLE {
         return true;
     }
 
+    /**
+     * @brief This function search a BLE device from it's name and if found it returns the device MAC address
+     * @param context          Main context of the Android application launcher
+     * @param bluetoothAdapter Bluetooth adapter internal instance of the Android API
+     * @param deviceName       Name of the device that will be searched
+     * @return String: MAC address of the device if founded, otherwise it returns null
+     */
     public static String searchForMacAddress(Context context, BluetoothAdapter bluetoothAdapter, String deviceName) {
         if(ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions((Activity) context, PERMISSIONS_STORAGE, 1);
@@ -181,15 +225,41 @@ public class RojoBLE {
         return null;
     }
 
+    /**
+     * @brief Allows the user compare the incoming data (bytes array) with a desired string
+     * @param dataReceived  Data received from the gatt server
+     * @param dataToCompare Data that will be compared with the incoming data
+     * @return True if they are equals, otherwise false
+     */
     public static boolean compareStrings(String dataReceived, String dataToCompare) {
         return dataReceived.toLowerCase().trim().equals(dataToCompare.toLowerCase().trim());
     }
 
+    /**
+     * @brief Allows the user compare data from the incoming raw data
+     * @param value         raw received data (in byte array) that will be compared
+     * @param dataToCompare Data that will be compared
+     * @return true if they are equals otherwise false
+     */
     public static boolean compareIncomingData(byte[] value, String dataToCompare) {
-        String strValue = new String(value, StandardCharsets.UTF_8);
-        return compareStrings(strValue, dataToCompare);
+        return compareStrings(getString(value), dataToCompare);
     }
 
+    /**
+     * @brief Translates the byte raw data to string
+     * @param value Incoming data
+     * @return String value of the data encoded in UTF 8
+     */
+    public static String getString(byte[] value) {
+        return new String(value, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * @brief Send data to the gatt server
+     * @note  Only available if the characteristic is ROJO_TYPE_WRITE
+     * @param dataBuffer Data that will be sent
+     * @return Status of the operation
+     */
     public boolean sendData(String dataBuffer) {
         mDataBuffer = dataBuffer.getBytes();
         if(GattCallback.sendData(mDataBuffer, mGatt)) {
@@ -202,21 +272,125 @@ public class RojoBLE {
         }
     }
 
+    /**
+     * @brief Getter of the RojoGattCallback Attribute
+     * @return RojoGattCallback instance
+     */
+    public RojoGattCallback getGattCallback() {
+        return GattCallback;
+    }
+
+    /**
+     * --------------------------------------------------------------------------
+     *                       GATT SERVER CONNECTION LISTENERS
+     * --------------------------------------------------------------------------
+     */
+
+    /**
+     * @brief Interface that specifies the method that will be handle the onGattServerConnectedListener
+     */
+    public interface SetGattServerConnectedListener {
+        void onGattServerConnectedListener();
+    }
+
+    /**
+     * @brief Allows the listener of RojoGattCallback executes the onGattServerConnectedListener
+     */
+    private void onGattServerConnectedListener() {
+        if(setGattServerConnectedListener != null) {
+            setGattServerConnectedListener.onGattServerConnectedListener();
+        }
+    }
+
+    /**
+     * @brief Setter of the listener
+     * @param listener Method that will be called by the listener in the main thread
+     *                 (or other one desired by the user)
+     */
+    public void setOnGattServerConnectedListener(SetGattServerConnectedListener listener) {
+        setGattServerConnectedListener = listener;
+    }
+
+    /**
+     * @brief Interface that specifies the method that will be handle the onGattServerDisconnectedListener
+     */
+    public interface SetGattServerDisconnectedListener {
+        void onGattServerDisconnectedListener();
+    }
+
+    /**
+     * @brief Allows the listener of RojoGattCallback executes the onGattServerDisconnectedListener
+     */
+    private void onGattServerDisconnectedListener() {
+        if(setGattServerDisconnectedListener != null) {
+            setGattServerDisconnectedListener.onGattServerDisconnectedListener();
+        }
+    }
+
+    /**
+     * @brief Setter of the listener
+     * @param listener Method that will be called by the listener in the main thread
+     *                 (or other one desired by the user)
+     */
+    public void setOnGattServerDisconnectedListener(SetGattServerDisconnectedListener listener) {
+        setGattServerDisconnectedListener = listener;
+    }
+
+    /**
+     * @brief Interface that specifies the method that will be handle the onGattServerDisconnectedListener
+     */
+    public interface SetOnGattServerStatusChangedListener {
+        void onCharacteristicNotificationListener(int status);
+    }
+
+    /**
+     * @brief Allows the listener of RojoGattCallback executes the onGattServerDisconnectedListener
+     * @param status status of the gatt server connection
+     */
+    private void onGattServerStatusChangedListener(int status) {
+        if(setOnGattServerStatusChangedListener != null) {
+            setOnGattServerStatusChangedListener.onCharacteristicNotificationListener(status);
+        }
+    }
+
+    /**
+     * @brief Setter of the listener
+     * @param listener Method that will be called by the listener in the main thread
+     *                 (or other one desired by the user)
+     */
+    public void setOnGattServerStatusChangedListeners(SetOnGattServerStatusChangedListener listener) {
+        setOnGattServerStatusChangedListener = listener;
+    }
+
+    /**
+     * --------------------------------------------------------------------------
+     *                     CHARACTERISTIC NOTIFICATION LISTENER
+     * --------------------------------------------------------------------------
+     */
+
+    /**
+     * @brief Interface that specifies the method that will be handle the onGattServerDisconnectedListener
+     */
+    public interface SetNotificationsListener {
+        void onCharacteristicNotificationListener(byte[] value);
+    }
+
+    /**
+     * @brief Interface that specifies the method that will be handle the onGattServerDisconnectedListener
+     * @param value Incoming data
+     */
     private void onCharacteristicNotificationListener(byte[] value) {
         if(setNotificationsListener != null) {
             setNotificationsListener.onCharacteristicNotificationListener(value);
         }
     }
 
-    public interface SetNotificationsListener {
-        void onCharacteristicNotificationListener(byte[] value);
-    }
-
+    /**
+     * @brief Setter of the listener
+     * @param listener Method that will be called by the listener in the main thread
+     *                 (or other one desired by the user)
+     */
     public void setOnCharacteristicNotificationListener(SetNotificationsListener listener) {
         setNotificationsListener = listener;
-    }
-
-    public RojoGattCallback getGattCallback() {
-        return GattCallback;
     }
 }
